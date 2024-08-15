@@ -76,6 +76,24 @@ dependencies: [
 
 ## Using SuiKit
 
+### Connecting to Sui Network
+
+```swift
+/// connect to devnet
+public let restClient = SuiProvider(connection: DevnetConnection())
+public let faucetClient = FaucetClient(connection: DevnetConnection())
+
+/// connect to testnet
+public let restClient = SuiProvider(connection: TestnetConnection())
+public let faucetClient = FaucetClient(connection: TestnetConnection())
+
+/// connect to mainnet
+public let restClient = SuiProvider(connection: MainnetConnection())
+public let faucetClient = FaucetClient(connection: MainnetConnection())
+
+```
+
+
 SuiKit is really easy to implement and use in your own projects. Simply provide the provider, transaction block, and account. Here's an example on how to transfer Sui tokens, which also utilizes the key generation functionality of the library
 
 ```swift
