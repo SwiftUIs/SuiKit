@@ -76,6 +76,8 @@ dependencies: [
 
 ## Using SuiKit
 
+SuiKit is really easy to implement and use in your own projects. Simply provide the provider, transaction block, and account.
+
 ### Connecting to Sui Network
 
 ```swift
@@ -93,34 +95,48 @@ public let faucetClient = FaucetClient(connection: MainnetConnection())
 
 ```
 
-
-SuiKit is really easy to implement and use in your own projects. Simply provide the provider, transaction block, and account. Here's an example on how to transfer Sui tokens, which also utilizes the key generation functionality of the library
+### Transfer Sui tokens
 
 ```swift
-import SuiKit
 
-do {
-    // Create new wallet
-    let newWallet = try Wallet()
+@State private var receiverAddress: String = ""
+@State private var tokenAmount: String = "0.2"
 
-    // Create Signer and Provider
-    let provider = SuiProvider()
-    let signer = RawSigner(account: newWallet.accounts[0], provider: provider)
+guard let amountDouble = Double(tokenAmount) else {
+                            self.message = "Please use a valid Double for royalty points and / or supply number."
+                            self.isShowingPopup = true
+                            return
+                        }
 
-    // Create transaction block
-    var tx = try TransactionBlock()
+self.viewModel.createTransaction(AccountAddress.fromHex(self.receiverAddress), amountDouble)
 
-    // Split coin and prepare transaction (e.g., sending 1K Droplets to an account)
-    let coin = try tx.splitCoin(tx.gas, [try tx.pure(value: .number(1_000))])
-    try tx.transferObjects([coin], try newWallet.accounts[0].address())
-
-    // Execute transaction
-    var result = try await signer.signAndExecuteTransaction(transactionBlock: &tx)
-    result = try await provider.waitForTransaction(tx: result.digest)
-    print(result)
-} catch {
-    print("Error: \(error)")
+public func createTransaction(_ receiverAddress: AccountAddress, _ amount: Double) async throws -> String? {
+        let coins = try await self.restClient.getCoins(account: try self.currentWallet.accounts[0].address())
+        if !coins.data.isEmpty {
+            var txBlock = try TransactionBlock()
+            let coin = try txBlock.splitCoin(
+                coin: txBlock.gas,
+                amounts: [
+                    txBlock.pure(
+                        value: .number(
+                            UInt64(amount * 1_000_000_000)
+                        )
+                    )
+                ]
+            )
+            let _ = try txBlock.transferObject(objects: [coin], address: receiverAddress.hex())
+            let options = SuiTransactionBlockResponseOptions(showEffects: true)
+            var result = try await self.restClient.signAndExecuteTransactionBlock(
+                transactionBlock: &txBlock,
+                signer: self.currentWallet.accounts[0],
+                options: options
+            )
+            result = try await self.restClient.waitForTransaction(tx: result.digest, options: options)
+            return result.digest
+        }
+        return nil
 }
+
 ```
 
 You can also read objects from the Sui blockchain. Below is an example on how to do so.
